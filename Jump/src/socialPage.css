@@ -1,0 +1,45 @@
+.rbc-calendar {
+    background-color: #f5f5f5; 
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Add shadow */
+    padding: 10px; /* Add spacing inside */
+    width: 1200px;
+    height: 1000px;
+}
+
+.rbc-toolbar {
+    /* Add styling for the toolbar here */
+}
+
+.rbc-toolbar button {
+    /* Style the buttons in the toolbar */
+}
+
+.rbc-toolbar button:hover {
+    /* Add hover effects for toolbar buttons */
+}
+
+.rbc-event {
+    /* Customize event styles here */
+}
+
+.rbc-event:hover {
+    /* Add hover effects for events */
+}
+
+.rbc-time-slot {
+    height: 80px; /* Increase height of time slots */
+    background-color: grey; /* Example background color */
+}
+
+.rbc-day-slot .rbc-time-slot {
+    height: 80px; /* Ensure it matches the same height */
+}
+
+.rbc-day-bg.rbc-selected-cell {
+    background-color: #d9edf7 !important;
+}
+
+.rbc-header {
+    /* Customize weekday headers */
+}
