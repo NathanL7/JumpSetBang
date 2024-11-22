@@ -4,17 +4,16 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './Navbar';
 import EventCalendar from './EventCalendar';
 import Landing from './Landing';
+import Login from './Login';
 
 
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/calendar" element={<EventCalendar />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/calendar" element={<EventCalendar />} />
+      <Route path="/login" element={<Login />} /> 
+    </Routes>
   );
 }
 

@@ -5,20 +5,29 @@ import './Navbar.css';
 
 function Navbar() {
   return (
-    <nav className="navbar">
-      <div className="navbar-container">
-        <h1 className="navbar-logo">YourDailyTracker</h1>
-        <ul className="navbar-links">
-          <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
-            <Link to="/calendar">Event Calendar</Link>
-          </li>
-        </ul>
-      </div>
-    </nav>
-  );
+<nav className="navbar">
+  <div className="navbar-container">
+    <h1 className="navbar-logo">YourDailyTracker</h1>
+    <ul className="navbar-links">
+      <li>
+        <Link to="/" className="button-link">
+          <button className="Nav-Buttons">User Page</button>
+        </Link>
+      </li>
+      <li>
+        <Link to="/calendar" className="button-link">
+          <button className="Nav-Buttons">Social Page</button>
+        </Link>
+      </li>
+      <li>
+        <Link to="/login" className="button-link">
+          <button className="Nav-Buttons">Login</button>
+        </Link>
+      </li>
+    </ul>
+  </div>
+</nav>
+  ); // <button onClick={toggleAccessibilityOptions} className="accessibility-button">Accessibility</button>
 }
 
 export default Navbar;
