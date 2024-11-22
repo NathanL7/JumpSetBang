@@ -47,8 +47,8 @@ def init_database():
                 reciever TEXT NOT NULL,
                 contents TEXT NOT NULL,
                 datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (sender) REFERENCES users(username))
-                FOREIGN KEY (reciever) REFERENCES users(username)''')
+                FOREIGN KEY (sender) REFERENCES users(username),
+                FOREIGN KEY (reciever) REFERENCES users(username))''')
 
     conn.commit()
     conn.close()
@@ -258,6 +258,7 @@ def get_messages(username):
         SELECT *
         FROM messages
         WHERE reciever = ?
+        SORT BY datetime DESC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
@@ -272,6 +273,7 @@ def get_sent_messages(username):
         SELECT *
         FROM messages
         WHERE sender = ?
+        SORT BY datetime DESC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
