@@ -1,4 +1,4 @@
-// src/Navbar.jsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './Navbar.css'; 
@@ -27,7 +27,7 @@ function Navbar() {
     </ul>
   </div>
 </nav>
-  ); // <button onClick={toggleAccessibilityOptions} className="accessibility-button">Accessibility</button>
+  );
 }
 
 export default Navbar;
