@@ -20,14 +20,20 @@ function Navbar() {
         </Link>
       </li>
       <li>
-        <Link to="/login" className="button-link">
+        <Link to="/Login" className="button-link">
           <button className="Nav-Buttons">Login</button>
+        </Link>
+      </li>
+      <li>
+        <Link to="/message" className="button-link">
+          <button className="Nav-Buttons">Message</button>
         </Link>
       </li>
     </ul>
   </div>
 </nav>
-  );
+  ); 
+
 }
 
 export default Navbar;
