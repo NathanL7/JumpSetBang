@@ -17,14 +17,14 @@ def get_db():
     conn.row_factory = sqlite3.Row  # Enables column access by name
     return conn
 
-# conn = get_db()
-# cursor = conn.cursor()
-# cursor.execute('DROP TABLE IF EXISTS users')
-# cursor.execute('DROP TABLE IF EXISTS events')
-# cursor.execute('DROP TABLE IF EXISTS participants')
-# cursor.execute('DROP TABLE IF EXISTS messages')
-# conn.commit()
-# conn.close()
+conn = get_db()
+cursor = conn.cursor()
+cursor.execute('DROP TABLE IF EXISTS users')
+cursor.execute('DROP TABLE IF EXISTS events')
+cursor.execute('DROP TABLE IF EXISTS participants')
+cursor.execute('DROP TABLE IF EXISTS messages')
+conn.commit()
+conn.close()
 
 def init_database():
     conn = get_db()
@@ -40,11 +40,14 @@ def init_database():
                 total_budget REAL NOT NULL)''')
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS events(
-                event_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host TEXT NOT NULL,
                 time_begin DATETIME NOT NULL,
                 time_end DATETIME NOT NULL,
                 location TEXT NOT NULL,
-                cost REAL NOT NULL)''')
+                cost REAL NOT NULL,
+                FOREIGN KEY (host) REFERENCES users(username) 
+                )''')                                                   # only the the host pays for an event
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS participants(
                 event_id INTEGER NOT NULL,
@@ -80,6 +83,10 @@ def index():
 def messages_page():
     return render_template('messages.html')
 
+@app.route('/integrated')
+def integrated():
+    return render_template('integrated.html')
+
 # Create event
 @app.route("/events", methods=["POST"])
 def create_event():
@@ -88,11 +95,18 @@ def create_event():
     cursor = conn.cursor()
     
     try:
-        # Insert event
+        # Check host's budget first
+        cursor.execute("SELECT balance FROM (SELECT total_budget - COALESCE(SUM(cost), 0) as balance FROM users LEFT JOIN events ON users.username = events.host WHERE users.username = ? GROUP BY users.username)", (data['username'],))
+        balance = cursor.fetchone()
+        
+        # if not balance or balance['balance'] < data['cost']:
+            # return jsonify({"error": "Insufficient budget to host event"}), 400
+
+        # Insert event with host
         cursor.execute('''
-            INSERT INTO events (time_begin, time_end, location, cost)
-            VALUES (?, ?, ?, ?)
-        ''', (data['time_begin'], data['time_end'], data['location'], data['cost']))
+            INSERT INTO events (host, time_begin, time_end, location, cost)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (data['username'], data['time_begin'], data['time_end'], data['location'], data['cost']))
         
         event_id = cursor.lastrowid
         
@@ -344,19 +358,11 @@ def join_event(event_id):
         if not event:
             return jsonify({"error": "Event not found"}), 404
             
-        # Check user's budget
-        cursor.execute("SELECT total_budget FROM users WHERE username = ?", (data['username'],))
-        user = cursor.fetchone()
-        if not user or user['total_budget'] < event['cost']:
-            return jsonify({"error": "Insufficient budget"}), 400
-            
-        # Add participant
         cursor.execute('''
             INSERT INTO participants (event_id, username)
             VALUES (?, ?)
         ''', (event_id, data['username']))
         
-        # Send response message to inviter
         if 'inviter' in data:
             response_content = {
                 "type": "invitation_response",
@@ -374,6 +380,26 @@ def join_event(event_id):
         return jsonify({"error": "Already joined this event"}), 400
     finally:
         conn.close()
+
+# get balance (budget - total cost of events user hosts) for a user
+@app.route('/users/<username>/balance', methods=['GET'])
+def get_balance(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT total_budget - COALESCE(SUM(cost), 0) as balance
+        FROM users
+        LEFT JOIN events ON users.username = events.host
+        WHERE users.username = ?
+        GROUP BY users.username
+    ''', (username,))
+    
+    balance = cursor.fetchone()
+    if not balance:
+        return jsonify({"error": "User not found"}), 404
+    
+    return jsonify(balance)
 
 if __name__ == "__main__":
     conn = get_db()

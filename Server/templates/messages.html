@@ -146,23 +146,22 @@
             border-radius: 4px;
         }
 
-        .event-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
 
-        .event-modal-content {
-            background: white;
-            margin: 15% auto;
-            padding: 20px;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 8px;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .balance {
+            color: #28a745;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -185,9 +184,14 @@
 
     <!-- Main Container -->
     <div id="mainContainer" class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>Messages</h2>
-            <button id="logoutBtn">Logout</button>
+        <div class="header-container">
+            <div class="header-left">
+                <h2>Messages</h2>
+                <div id="userBalance" class="balance">Balance: $0</div>
+            </div>
+            <div class="header-right">
+                <button id="logoutBtn">Logout</button>
+            </div>
         </div>
         
         <div class="messaging-container">
@@ -227,19 +231,32 @@
             if (currentUser) {
                 fetchUsers();
                 startMessagePolling();
+                updateBalance();
             } else {
                 stopMessagePolling();
             }
         }
 
+        async function updateBalance() {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`/users/${currentUser.username}/balance`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userBalance').textContent = `Balance: $${data.balance}`;
+                }
+            } catch (err) {
+                console.error('Error fetching balance:', err);
+            }
+        }
+
+        // Login Form Handler
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
                 const response = await fetch('/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: document.getElementById('loginUsername').value,
                         password: document.getElementById('loginPassword').value
@@ -259,6 +276,7 @@
             }
         });
 
+        // Fetch and display users
         async function fetchUsers() {
             try {
                 const response = await fetch('/users');
@@ -282,6 +300,7 @@
             }
         }
 
+        // Select user to chat with
         function selectUser(username) {
             selectedUser = username;
             document.querySelectorAll('.user-item').forEach(item => {
@@ -290,6 +309,7 @@
             fetchMessages();
         }
 
+        // Display messages
         function displayMessages(messages) {
             const container = document.getElementById('messagesContainer');
             container.innerHTML = messages.map(msg => {
@@ -305,7 +325,8 @@
                                 <div class="message-content">
                                     ${isSent ? 
                                         `You invited ${msg.reciever} to your event at ${event.location}` :
-                                        `${msg.sender} invited you to their event at ${event.location}!`
+                                        `${msg.sender} invited you to their event at ${event.location}!
+                                         ${event.host === msg.sender ? ' (They are hosting)' : ` (Hosted by ${event.host})`}`
                                     }
                                     ${!isSent ? `
                                         <div style="margin-top: 10px;">
@@ -332,7 +353,6 @@
                         `;
                     }
                 } catch (e) {
-                    // Regular message
                     return `
                         <div class="message ${isSent ? 'sent' : 'received'}">
                             <div class="message-content">${msg.contents}</div>
@@ -344,6 +364,7 @@
             container.scrollTop = container.scrollHeight;
         }
 
+        // Send message handler
         document.getElementById('messageForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!selectedUser) {
@@ -353,17 +374,12 @@
 
             const messageInput = document.getElementById('messageInput');
             const message = messageInput.value.trim();
-            
-            if (!message) {
-                return;
-            }
+            if (!message) return;
             
             try {
                 const response = await fetch('/messages', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sender: currentUser.username,
                         reciever: selectedUser,
@@ -384,6 +400,7 @@
             }
         });
 
+        // Event invitation handler
         document.getElementById('inviteToEventBtn').addEventListener('click', async () => {
             if (!selectedUser) {
                 alert('Please select a user first');
@@ -394,14 +411,16 @@
                 const response = await fetch(`/users/${currentUser.username}/events`);
                 if (response.ok) {
                     const events = await response.json();
+                    if (events.length === 0) {
+                        alert('You have no events to invite to');
+                        return;
+                    }
                     const event = await showEventSelectionDialog(events);
                     if (!event) return;
                     
                     const inviteResponse = await fetch('/events/invite', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             event_id: event.event_id,
                             sender: currentUser.username,
@@ -423,6 +442,7 @@
             }
         });
 
+        // Show event selection dialog
         function showEventSelectionDialog(events) {
             return new Promise((resolve) => {
                 const dialog = document.createElement('div');
@@ -447,10 +467,9 @@
                             <div class="event-item" style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 4px;">
                                 <div><strong>Location:</strong> ${event.location}</div>
                                 <div><strong>Start:</strong> ${new Date(event.time_begin).toLocaleString()}</div>
-                                <div><strong>Cost:</strong> $${event.cost}</div>
-                                <button onclick="selectEvent(${event.event_id})" style="margin-top: 10px;">
-                                    Select
-                                </button>
+                                <div><strong>End:</strong> ${new Date(event.time_end).toLocaleString()}</div>
+                                <div><strong>Cost:</strong> $${event.cost} ${event.host === currentUser.username ? '(You are hosting)' : ''}</div>
+                                <button onclick="selectEvent(${event.event_id})" style="margin-top: 10px;">Select</button>
                             </div>
                         `).join('')}
                     </div>
@@ -472,21 +491,22 @@
             });
         }
 
+        // Join event handler
         async function joinEvent(eventId, inviter) {
             try {
                 const response = await fetch(`/events/${eventId}/join`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: currentUser.username,
                         inviter: inviter
                     })
                 });
+                
                 if (response.ok) {
                     alert('Successfully joined the event!');
                     await fetchMessages();
+                    await updateBalance(); // Update balance after joining
                 } else {
                     const error = await response.json();
                     alert(error.error || 'Failed to join event');
@@ -497,6 +517,7 @@
             }
         }
 
+        // Fetch messages
         async function fetchMessages() {
             if (!selectedUser) return;
             
@@ -513,6 +534,7 @@
             }
         }
 
+        // Message polling
         function startMessagePolling() {
             messagePollingInterval = setInterval(fetchMessages, 1000);
         }
@@ -524,6 +546,7 @@
             }
         }
 
+        // Logout handler
         document.getElementById('logoutBtn').addEventListener('click', () => {
             currentUser = null;
             selectedUser = null;
