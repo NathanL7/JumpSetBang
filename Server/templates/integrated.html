@@ -171,8 +171,7 @@
         .tab-content.active {
             display: block;
         }
-        
-        /* Add styles for the event dialog backdrop */
+
         .dialog-backdrop {
             position: fixed;
             top: 0;
@@ -327,12 +326,10 @@
             });
         });
         
-        // Utility function for datetime formatting
         function formatDatetimeLocal(date) {
             return date.toISOString().slice(0, 16);
         }
-        
-        // Main UI update function
+
         async function updateUI() {
             document.getElementById('authContainer').style.display = currentUser ? 'none' : 'block';
             document.getElementById('mainContainer').style.display = currentUser ? 'block' : 'none';
@@ -346,7 +343,6 @@
             }
         }
         
-        // Balance update
         async function updateBalance() {
             if (!currentUser) return;
             try {
@@ -472,7 +468,6 @@
             }
         }
         
-        // Messaging system
         async function fetchUsers() {
             try {
                 const response = await fetch('/users');
@@ -752,11 +747,9 @@
             updateUI();
         });
         
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             setDefaultDates();
             
-            // Add validation for event times
             document.getElementById('eventEnd').addEventListener('change', function() {
                 const startTime = new Date(document.getElementById('eventStart').value);
                 const endTime = new Date(this.value);
@@ -779,15 +772,80 @@
     });
 });
 
-// Message form enter key handling
 document.getElementById('messageInput').addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        document.getElementById('messageForm').dispatchEvent(new Event('submit'));
+        e.preventDefault(); // Prevent the default behavior
+        const messageInput = this;
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        if (!selectedUser) {
+            alert('Please select a user to message');
+            return;
+        }
+        
+        fetch('/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: currentUser.username,
+                reciever: selectedUser,
+                contents: message
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                messageInput.value = '';
+                return fetchMessages();
+            } else {
+                return response.json().then(error => {
+                    throw new Error(error.error || 'Failed to send message');
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Send message error:', err);
+            alert(err.message);
+        });
     }
 });
 
-// Initial UI update
+document.getElementById('messageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedUser) {
+        alert('Please select a user to message');
+        return;
+    }
+
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    try {
+        const response = await fetch('/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: currentUser.username,
+                reciever: selectedUser,
+                contents: message
+            })
+        });
+
+        if (response.ok) {
+            messageInput.value = '';
+            await fetchMessages();
+        } else {
+            const error = await response.json();
+            alert('Failed to send message: ' + error.error);
+        }
+    } catch (err) {
+        console.error('Send message error:', err);
+        alert('Failed to send message');
+    }
+});
+
 updateUI();
 </script>
 </html>
