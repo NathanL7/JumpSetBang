@@ -5,8 +5,11 @@
 # https://flask.palletsprojects.com/en/stable/
 
 import sqlite3
-from flask import Flask, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS 
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 def get_db():
     conn = sqlite3.connect('database.db')
@@ -36,25 +39,29 @@ def init_database():
                 username TEXT NOT NULL,
                 PRIMARY KEY(event_id, username),
                 FOREIGN KEY (event_id) REFERENCES events(event_id),
-                FOREIGN KEY (username) REFERENCES users (username)''')
+                FOREIGN KEY (username) REFERENCES users (username))''')
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS messages(
                 message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 event_id INTEGER NOT NULL,
                 username TEXT NOT NULL,
                 message TEXT NOT NULL,
-                FOREIGN KEY (username) REFERENCES users(username)'''
-    )
+                FOREIGN KEY (username) REFERENCES users(username))''')
 
     conn.commit()
     conn.close()
     
 init_database()
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
+@app.after_request
+def after_request(response):
+    logging.debug(f"Response: {response.status_code} - {response.get_data(as_text=True)}")
+    return response
 
-@app.route("/")
-def hello_world():
-    return "<p>Ping successful, server is running</p>" 
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # Create event
 @app.route("/events", methods=["POST"])
@@ -157,15 +164,15 @@ def get_user_events(username):
     events = [dict(row) for row in cursor.fetchall()]
     return jsonify(events)
 
-@app.route('/register', method=["POST"])
+@app.route('/register', methods=["POST"])  # Changed method to methods
 def registerUser():
-    data = request.json
+    data = request.get_json()
     username = data.get('username')
     password = data.get('password')
     name = data.get('name')
     total_budget = data.get('total_budget')
 
-    if not total_budget:
+    if total_budget is None:
         total_budget = 0
 
     conn = get_db()
@@ -189,7 +196,7 @@ def registerUser():
 
     return jsonify({"message": "User registered successfully"}), 201
     
-@app.route('/login', method=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     data = request.json
     username = data.get('username')
@@ -199,18 +206,45 @@ def login():
         return jsonify({'error': 'Username and password are required'}), 400
 
     conn = get_db()
-    validate = conn.execute('''SELECT * FROM users WHERE username = ''')
+    validate = conn.execute('''
+        SELECT *
+        FROM 
+            users 
+        WHERE username = ?''',
+    (username,)).fetchone()
+
+    conn.close()
+
+    if validate is None:
+        return jsonify({'error': 'Invalid username or password'}), 401
+
+    user_data = {
+        'username': validate['username'],
+        'name': validate['name'],
+        'total_budget': validate['total_budget']
+    }
+    if check_password_hash(validate['password'], password):
+        return jsonify(user_data), 200
+
+    else:
+        return jsonify({'error': 'Invalid username or password'}), 401
+        
+        
 if __name__ == "__main__":
     conn = get_db()
     cursor = conn.cursor()
     
-    # TEST USER
-    users = [('a', 'a', 'test1', '100'), ('b', 'b', 'test2', '50')]
-    # INSERT STATEMENT
-    cursor.executemany('''INSERT INTO users(username, password, name, total_budget) VALUES (?,?,?,?)''', users)
+    # TEST USERS
+    users = [
+        ('a', generate_password_hash('a'), 'test1', '100'),
+        ('b', generate_password_hash('b'), 'test2', '50')
+    ]
+
+    cursor.executemany('''INSERT OR REPLACE INTO users(username, password, name, total_budget) 
+                         VALUES (?,?,?,?)''', users)
 
     conn.commit()
     conn.close()
     
     app.run(debug=True) # run and wait for requests 
-    #flask --app .\Server\main.py run
+    #flask --app .\Server\main.py run --port=5050

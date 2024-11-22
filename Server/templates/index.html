@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Manager Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: none;
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .event-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="authContainer" class="container" style="display: block;">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="loginUsername" required>
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="loginPassword" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="regUsername" required>
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="regPassword" required>
+            </div>
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" id="regName" required>
+            </div>
+            <div class="form-group">
+                <label>Total Budget:</label>
+                <input type="number" id="regBudget" required>
+            </div>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <!-- Main Container -->
+    <div id="mainContainer" class="container">
+        <button id="logoutBtn" style="margin-bottom: 20px;">Logout</button>
+        
+        <h2>Create New Event</h2>
+        <form id="createEventForm">
+            <div class="form-group">
+                <label>Start Time:</label>
+                <input type="datetime-local" id="eventStart" required>
+            </div>
+            <div class="form-group">
+                <label>End Time:</label>
+                <input type="datetime-local" id="eventEnd" required>
+            </div>
+            <div class="form-group">
+                <label>Location:</label>
+                <input type="text" id="eventLocation" required>
+            </div>
+            <div class="form-group">
+                <label>Cost:</label>
+                <input type="number" id="eventCost" required>
+            </div>
+            <button type="submit">Create Event</button>
+        </form>
+
+        <h2>Your Events</h2>
+        <div id="eventsList"></div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        // Show/hide containers based on auth state
+        function updateUI() {
+            document.getElementById('authContainer').style.display = currentUser ? 'none' : 'block';
+            document.getElementById('mainContainer').style.display = currentUser ? 'block' : 'none';
+            if (currentUser) {
+                fetchUserEvents();
+            }
+        }
+
+        // Login Form Handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: document.getElementById('loginUsername').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    updateUI();
+                } else {
+                    alert('Login failed');
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('Login failed');
+            }
+        });
+
+        // Register Form Handler
+        // Register Form Handler
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    username: document.getElementById('regUsername').value,
+                    password: document.getElementById('regPassword').value,
+                    name: document.getElementById('regName').value,
+                    total_budget: parseFloat(document.getElementById('regBudget').value)
+                };
+
+                console.log('Sending registration data:', formData); // Debug log
+
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Registration successful! Please login.');
+                    document.getElementById('registerForm').reset();
+                } else {
+                    alert(`Registration failed: ${data.error}\n${data.details || ''}`);
+                }
+            } catch (err) {
+                console.error('Registration error:', err);
+                alert(`Registration failed: ${err.message}`);
+            }
+        });
+
+        // Create Event Form Handler
+        document.getElementById('createEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/events', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: currentUser.username,
+                        time_begin: document.getElementById('eventStart').value,
+                        time_end: document.getElementById('eventEnd').value,
+                        location: document.getElementById('eventLocation').value,
+                        cost: parseFloat(document.getElementById('eventCost').value)
+                    })
+                });
+                if (response.ok) {
+                    document.getElementById('createEventForm').reset();
+                    fetchUserEvents();
+                } else {
+                    alert('Failed to create event');
+                }
+            } catch (err) {
+                console.error('Create event error:', err);
+                alert('Failed to create event');
+            }
+        });
+
+        // Fetch User Events
+        async function fetchUserEvents() {
+            try {
+                const response = await fetch(`/users/${currentUser.username}/events`);
+                if (response.ok) {
+                    const events = await response.json();
+                    const eventsList = document.getElementById('eventsList');
+                    eventsList.innerHTML = events.map(event => `
+                        <div class="event-card">
+                            <div><strong>Location:</strong> ${event.location}</div>
+                            <div><strong>Start:</strong> ${new Date(event.time_begin).toLocaleString()}</div>
+                            <div><strong>End:</strong> ${new Date(event.time_end).toLocaleString()}</div>
+                            <div><strong>Cost:</strong> $${event.cost}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Fetch events error:', err);
+            }
+        }
+
+        // Logout Handler
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            currentUser = null;
+            updateUI();
+        });
+
+        // Initial UI update
+        updateUI();
+    </script>
+</body>
+</html>
