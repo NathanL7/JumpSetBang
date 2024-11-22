@@ -3,6 +3,7 @@ import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import { useAuth } from './authContext';
+import { useNavigate } from 'react-router-dom';
 
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
@@ -22,9 +23,19 @@ function EventCalendar() {
   });
   const [error, setError] = useState('');
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to login if user is null
+  useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
 
   // Fetch events for the user
   useEffect(() => {
+    if (!user) return; // Prevent fetch if user is not logged in
+
     const fetchEvents = async () => {
       try {
         const response = await fetch(`http://127.0.0.1:5050/users/${user.username}/events`);
@@ -48,7 +59,7 @@ function EventCalendar() {
     };
 
     fetchEvents();
-  }, [user.username]);
+  }, [user]);
 
   const handleSelectSlot = ({ start, end }) => {
     setNewEvent({
