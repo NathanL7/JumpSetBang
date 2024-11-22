@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './Message.css';
+import {useAuth} from './authContext';
 
-function Message({ userId }) {
+function Message() {
+
+  const { user } = useAuth();
+  const userId = user?.username;
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -9,7 +13,7 @@ function Message({ userId }) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/messages?userId=${userId}`);
+        const response = await fetch(`http://localhost:5050/messages?userId=${userId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch messages');
         }
