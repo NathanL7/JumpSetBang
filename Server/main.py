@@ -46,6 +46,7 @@ def init_database():
                 sender TEXT NOT NULL,
                 reciever TEXT NOT NULL,
                 contents TEXT NOT NULL,
+                datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sender) REFERENCES users(username))
                 FOREIGN KEY (reciever) REFERENCES users(username)''')
 
@@ -149,8 +150,7 @@ def get_event(event_id):
     
     return jsonify(result)
 
-# Get user's events
-@app.route("/users/<username>/events", methods=["GET"])
+@app.route("/users/<username>/events", methods=["GET"]) # get all events a user is participating in
 def get_user_events(username):
     conn = get_db()
     cursor = conn.cursor()
@@ -165,7 +165,7 @@ def get_user_events(username):
     events = [dict(row) for row in cursor.fetchall()]
     return jsonify(events)
 
-@app.route('/register', methods=["POST"])  # Changed method to methods
+@app.route('/register', methods=["POST"])  # user registration
 def registerUser():
     data = request.get_json()
     username = data.get('username')
@@ -197,7 +197,7 @@ def registerUser():
 
     return jsonify({"message": "User registered successfully"}), 201
     
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST']) # user login
 def login():
     data = request.json
     username = data.get('username')
@@ -230,7 +230,7 @@ def login():
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/messages', methods=['POST'])
+@app.route('/messages', methods=['POST']) # sends a message
 def send_message():
     data = request.get_json()
     conn = get_db()
@@ -249,7 +249,7 @@ def send_message():
     finally:
         conn.close()
 
-@app.route('/messages/recieved/<username>', methods=['GET']) # gets messages a user has recieved
+@app.route('/messages/recieved/<username>', methods=['GET']) # gets all messages a user has recieved
 def get_messages(username):
     conn = get_db()
     cursor = conn.cursor()
@@ -263,7 +263,7 @@ def get_messages(username):
     messages = [dict(row) for row in cursor.fetchall()]
     return jsonify(messages)
 
-@app.route('/messages/sent/<username>', methods=['GET']) # gets messages a user has sent
+@app.route('/messages/sent/<username>', methods=['GET']) # gets all messages a user has sent
 def get_sent_messages(username):
     conn = get_db()
     cursor = conn.cursor()
@@ -273,6 +273,22 @@ def get_sent_messages(username):
         FROM messages
         WHERE sender = ?
     ''', (username,))
+
+    messages = [dict(row) for row in cursor.fetchall()]
+    return jsonify(messages)
+
+# route to get messages between two users
+@app.route('/messages/<sender>/<reciever>', methods=['GET'])
+def get_messages_between(sender, reciever):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT *
+        FROM messages
+        WHERE sender = ? AND reciever = ?
+        SORT BY datetime DESC
+    ''', (sender, reciever))
 
     messages = [dict(row) for row in cursor.fetchall()]
     return jsonify(messages)
