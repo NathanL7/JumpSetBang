@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from './authContext'; // Ensure this path is correct
+import { useAuth } from './authContext';
 import { useNavigate } from 'react-router-dom';
-import jwtDecode from 'jwt-decode'; // Fixed import for jwtDecode
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -12,9 +11,9 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
-      const response = await fetch('http://localhost:5000/login:', {
+      const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -23,35 +22,18 @@ const Login = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Login failed. Please check your credentials.');
+        const errorText = await response.text(); // Read error message
+        throw new Error(errorText || 'Login failed. Please check your credentials.');
       }
 
       const employee = await response.json();
-      console.log("Successful Login! Welcome " + employee.firstName);
-      
+      console.log('Successful Login! Welcome ' + employee.firstName);
+
       login(employee);
       navigate('/home');
-    } catch (error) {
-      setError(error.message);
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred.');
     }
-  };
-
-  const handleGoogleLoginSuccess = (response) => {
-    console.log("Google Login Success:", response);
-    const user = jwtDecode(response.credential);
-    const employeeData = {
-      id: null,
-      firstName: user.given_name,
-      lastName: user.family_name,
-      isManager: false,
-    };
-    
-    login(employeeData);
-    navigate('/home');
-  };
-
-  const handleGoogleLoginFailure = () => {
-    setError("Google login failed. Please try again.");
   };
 
   return (
@@ -84,12 +66,6 @@ const Login = () => {
       <button type="submit" className="btn btn-success btn-block">
         Login
       </button>
-      <div className="mt-3">
-        <GoogleLogin
-          onSuccess={handleGoogleLoginSuccess}
-          onError={handleGoogleLoginFailure}
-        />
-      </div>
     </form>
   );
 };
