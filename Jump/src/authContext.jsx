@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState } from 'react';
 
-// Create the AuthContext
 const AuthContext = createContext();
 
-// AuthProvider component to wrap the app
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
@@ -22,7 +20,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom hook to use AuthContext
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
