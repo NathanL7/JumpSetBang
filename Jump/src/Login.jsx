@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from './authContext'; // Ensure this path is correct
 import { useNavigate } from 'react-router-dom';
-import { GoogleLogin } from '@react-oauth/google';
 import jwtDecode from 'jwt-decode'; // Fixed import for jwtDecode
 
 const Login = () => {
@@ -15,7 +14,7 @@ const Login = () => {
     e.preventDefault();
     
     try {
-      const response = await fetch('https://project3-team3-rf8c.onrender.com/api/login', {
+      const response = await fetch('http://localhost:5000/login:', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
