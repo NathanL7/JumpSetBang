@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS 
 import logging
+import json
 logging.basicConfig(level=logging.DEBUG)
 
 def get_db():
@@ -16,14 +17,14 @@ def get_db():
     conn.row_factory = sqlite3.Row  # Enables column access by name
     return conn
 
-conn = get_db()
-cursor = conn.cursor()
-cursor.execute('DROP TABLE IF EXISTS users')
-cursor.execute('DROP TABLE IF EXISTS events')
-cursor.execute('DROP TABLE IF EXISTS participants')
-cursor.execute('DROP TABLE IF EXISTS messages')
-conn.commit()
-conn.close()
+# conn = get_db()
+# cursor = conn.cursor()
+# cursor.execute('DROP TABLE IF EXISTS users')
+# cursor.execute('DROP TABLE IF EXISTS events')
+# cursor.execute('DROP TABLE IF EXISTS participants')
+# cursor.execute('DROP TABLE IF EXISTS messages')
+# conn.commit()
+# conn.close()
 
 def init_database():
     conn = get_db()
@@ -51,18 +52,15 @@ def init_database():
                 PRIMARY KEY(event_id, username),
                 FOREIGN KEY (event_id) REFERENCES events(event_id),
                 FOREIGN KEY (username) REFERENCES users (username))''')
-    # Recreate messages table
-    cursor.execute('''
-        CREATE TABLE messages(
-            message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender TEXT NOT NULL,
-            reciever TEXT NOT NULL,
-            contents TEXT NOT NULL,
-            datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (sender) REFERENCES users(username),
-            FOREIGN KEY (reciever) REFERENCES users(username)
-        )
-    ''')
+    cursor.execute(
+        '''CREATE TABLE IF NOT EXISTS messages(
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender TEXT NOT NULL,
+                reciever TEXT NOT NULL,
+                contents TEXT NOT NULL,
+                datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (sender) REFERENCES users(username),
+                FOREIGN KEY (reciever) REFERENCES users(username))''')
     conn.commit()
     conn.close()
     
@@ -108,39 +106,6 @@ def create_event():
         return jsonify({"message": "Event created", "event_id": event_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    finally:
-        conn.close()
-
-# Join event
-@app.route("/events/<int:event_id>/join", methods=["POST"])
-def join_event(event_id):
-    data = request.get_json()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if event exists
-        cursor.execute("SELECT cost FROM events WHERE event_id = ?", (event_id,))
-        event = cursor.fetchone()
-        if not event:
-            return jsonify({"error": "Event not found"}), 404
-            
-        # Check user's budget
-        cursor.execute("SELECT total_budget FROM users WHERE username = ?", (data['username'],))
-        user = cursor.fetchone()
-        if not user or user['total_budget'] < event['cost']:
-            return jsonify({"error": "Insufficient budget"}), 400
-            
-        # Add participant
-        cursor.execute('''
-            INSERT INTO participants (event_id, username)
-            VALUES (?, ?)
-        ''', (event_id, data['username']))
-        
-        conn.commit()
-        return jsonify({"message": "Joined event successfully"}), 200
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Already joined this event"}), 400
     finally:
         conn.close()
 
@@ -325,6 +290,90 @@ def get_messages_between(sender, reciever):
 
     messages = [dict(row) for row in cursor.fetchall()]
     return jsonify(messages)
+
+# Add to your existing Flask routes:
+
+@app.route('/events/invite', methods=['POST'])
+def invite_to_event():
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Verify event exists and sender is a participant
+        cursor.execute('''
+            SELECT e.* FROM events e
+            JOIN participants p ON e.event_id = p.event_id
+            WHERE e.event_id = ? AND p.username = ?
+        ''', (data['event_id'], data['sender']))
+        
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"error": "Event not found or you're not a participant"}), 404
+
+        # Create invitation message with event details
+        message_content = {
+            "type": "event_invitation",
+            "event_id": data['event_id'],
+            "event_details": dict(event)
+        }
+        
+        cursor.execute('''
+            INSERT INTO messages (sender, reciever, contents)
+            VALUES (?, ?, ?)
+        ''', (data['sender'], data['recipient'], json.dumps(message_content)))
+        
+        conn.commit()
+        return jsonify({"message": "Invitation sent"}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        conn.close()
+
+@app.route('/events/<int:event_id>/join', methods=['POST'])
+def join_event(event_id):
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if event exists
+        cursor.execute("SELECT cost FROM events WHERE event_id = ?", (event_id,))
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
+            
+        # Check user's budget
+        cursor.execute("SELECT total_budget FROM users WHERE username = ?", (data['username'],))
+        user = cursor.fetchone()
+        if not user or user['total_budget'] < event['cost']:
+            return jsonify({"error": "Insufficient budget"}), 400
+            
+        # Add participant
+        cursor.execute('''
+            INSERT INTO participants (event_id, username)
+            VALUES (?, ?)
+        ''', (event_id, data['username']))
+        
+        # Send response message to inviter
+        if 'inviter' in data:
+            response_content = {
+                "type": "invitation_response",
+                "event_id": event_id,
+                "status": "accepted"
+            }
+            cursor.execute('''
+                INSERT INTO messages (sender, reciever, contents)
+                VALUES (?, ?, ?)
+            ''', (data['username'], data['inviter'], json.dumps(response_content)))
+        
+        conn.commit()
+        return jsonify({"message": "Joined event successfully"}), 200
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Already joined this event"}), 400
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     conn = get_db()
