@@ -1,5 +1,4 @@
 import EventCalendar from './EventCalendar.jsx'; 
-import './Landing.css';
 
 function Landing() {
   return (
