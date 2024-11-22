@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './authContext';
 import './Navbar.css';
 
+
+
 function Navbar() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -11,11 +14,18 @@ function Navbar() {
     setDropdownOpen(!dropdownOpen);
   };
 
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
+
   const handleLogout = () => {
     logout();
-    setDropdownOpen(false); // Close dropdown after logout
+    setDropdownOpen(false);
+    navigate("/login"); 
   };
-
+  
   return (
     <nav className="navbar">
       <div className="navbar-container">
@@ -27,7 +37,7 @@ function Navbar() {
             </Link>
           </li>
           <li>
-            <Link to="/calendar" className="button-link">
+            <Link to="/social" className="button-link">
               <button className="Nav-Buttons">Social Page</button>
             </Link>
           </li>
