@@ -1,9 +1,3 @@
-# use sqlite to store data
-# use flask to create the server
-
-# https://docs.python.org/3/library/sqlite3.html
-# https://flask.palletsprojects.com/en/stable/
-
 import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, request, jsonify, render_template
@@ -14,23 +8,12 @@ logging.basicConfig(level=logging.DEBUG)
 
 def get_db():
     conn = sqlite3.connect('database.db')
-    conn.row_factory = sqlite3.Row  # Enables column access by name
+    conn.row_factory = sqlite3.Row  
     return conn
-
-# conn = get_db()
-# cursor = conn.cursor()
-# cursor.execute('DROP TABLE IF EXISTS users')
-# cursor.execute('DROP TABLE IF EXISTS events')
-# cursor.execute('DROP TABLE IF EXISTS participants')
-# cursor.execute('DROP TABLE IF EXISTS messages')
-# conn.commit()
-# conn.close()
 
 def init_database():
     conn = get_db()
     cursor = conn.cursor()
-
-    # cursor.execute('DROP TABLE IF EXISTS messages')
     
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS users(
@@ -47,7 +30,7 @@ def init_database():
                 location TEXT NOT NULL,
                 cost REAL NOT NULL,
                 FOREIGN KEY (host) REFERENCES users(username) 
-                )''')                                                   # only the the host pays for an event
+                )''')                                                   
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS participants(
                 event_id INTEGER NOT NULL,
@@ -69,7 +52,7 @@ def init_database():
     
 init_database()
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  
 @app.after_request
 def after_request(response):
     logging.debug(f"Response: {response.status_code} - {response.get_data(as_text=True)}")
@@ -79,17 +62,6 @@ def after_request(response):
 def index():
     return render_template('integrated.html')
 
-# These are deprecated
-
-# @app.route('/messages')
-# def messages_page():
-#     return render_template('messages.html')
-
-# @app.route('/integrated')
-# def integrated():
-#     return render_template('integrated.html')
-
-# Create event
 @app.route("/events", methods=["POST"])
 def create_event():
     data = request.get_json()
@@ -97,22 +69,16 @@ def create_event():
     cursor = conn.cursor()
     
     try:
-        # Check host's budget first
         cursor.execute("SELECT balance FROM (SELECT total_budget - COALESCE(SUM(cost), 0) as balance FROM users LEFT JOIN events ON users.username = events.host WHERE users.username = ? GROUP BY users.username)", (data['username'],))
         balance = cursor.fetchone()
-        
-        # if not balance or balance['balance'] < data['cost']:
-            # return jsonify({"error": "Insufficient budget to host event"}), 400
 
-        # Insert event with host
         cursor.execute('''
             INSERT INTO events (host, time_begin, time_end, location, cost)
             VALUES (?, ?, ?, ?, ?)
         ''', (data['username'], data['time_begin'], data['time_end'], data['location'], data['cost']))
         
         event_id = cursor.lastrowid
-        
-        # Add creator as participant
+
         cursor.execute('''
             INSERT INTO participants (event_id, username)
             VALUES (?, ?)
@@ -148,7 +114,7 @@ def get_event(event_id):
     
     return jsonify(result)
 
-@app.route("/users/<username>/events", methods=["GET"]) # get all events a user is participating in
+@app.route("/users/<username>/events", methods=["GET"]) 
 def get_user_events(username):
     conn = get_db()
     cursor = conn.cursor()
@@ -163,7 +129,7 @@ def get_user_events(username):
     events = [dict(row) for row in cursor.fetchall()]
     return jsonify(events)
 
-@app.route('/register', methods=["POST"])  # user registration
+@app.route('/register', methods=["POST"])  
 def registerUser():
     data = request.get_json()
     username = data.get('username')
@@ -195,7 +161,7 @@ def registerUser():
 
     return jsonify({"message": "User registered successfully"}), 201
     
-@app.route('/login', methods=['POST']) # user login
+@app.route('/login', methods=['POST']) 
 def login():
     data = request.json
     username = data.get('username')
@@ -243,7 +209,6 @@ def send_message():
     cursor = conn.cursor()
 
     try:
-        # Make sure all required fields are present
         if not all(k in data for k in ['sender', 'reciever', 'contents']):
             return jsonify({"error": "Missing required fields"}), 400
 
@@ -255,12 +220,12 @@ def send_message():
         conn.commit()
         return jsonify({"message": "Message sent successfully"}), 201
     except Exception as e:
-        print(f"Error sending message: {str(e)}")  # Add debug logging
+        print(f"Error sending message: {str(e)}")
         return jsonify({"error": str(e)}), 400
     finally:
         conn.close()
 
-@app.route('/messages/recieved/<username>', methods=['GET']) # gets all messages a user has recieved
+@app.route('/messages/recieved/<username>', methods=['GET'])
 def get_messages(username):
     conn = get_db()
     cursor = conn.cursor()
