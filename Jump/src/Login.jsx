@@ -4,11 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import "./Login.css"
 
 const Login = () => {
-  const [isRegistering, setIsRegistering] = useState(false); // Toggle between Login and Register
+  const [isRegistering, setIsRegistering] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState(''); // Only for Register
-  const [totalBudget, setTotalBudget] = useState(0); // Only for Register
+  const [name, setName] = useState(''); 
+  const [totalBudget, setTotalBudget] = useState(0); 
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const { login } = useAuth();
@@ -57,7 +57,7 @@ const Login = () => {
       }
 
       setSuccessMessage('Registration successful! You can now log in.');
-      setIsRegistering(false); // Switch to Login form
+      setIsRegistering(false); 
       setUsername('');
       setPassword('');
       setName('');

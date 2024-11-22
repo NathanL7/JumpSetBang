@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: none;
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .balance {
+            font-size: 1.1em;
+            color: #28a745;
+            font-weight: bold;
+            padding: 8px 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .messaging-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 20px;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .users-list {
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .user-item {
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 5px;
+        }
+        .user-item:hover {
+            background-color: #f0f0f0;
+        }
+        .user-item.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+        .messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            max-width: 70%;
+        }
+        .message.sent {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .message.received {
+            background-color: #e9ecef;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="datetime-local"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .join-button {
+            background-color: #28a745;
+            margin-top: 8px;
+        }
+        .join-button:hover {
+            background-color: #218838;
+        }
+        .event-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        .tab-button {
+            background-color: #f8f9fa;
+            color: #007bff;
+            border: none;
+            padding: 10px 20px;
+            margin-right: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .tab-button.active {
+            background-color: #007bff;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .dialog-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .dialog-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 400px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Container -->
+    <div id="authContainer" class="container auth-container" style="display: block;">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="loginUsername" required>
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="loginPassword" required>
+            </div>
+            <button type="submit">Login</button>
+        </form>
+
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Username:</label>
+                <input type="text" id="regUsername" required>
+            </div>
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" id="regPassword" required>
+            </div>
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" id="regName" required>
+            </div>
+            <div class="form-group">
+                <label>Total Budget:</label>
+                <input type="number" id="regBudget" required>
+            </div>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <!-- Main Container -->
+    <div id="mainContainer" class="container">
+        <div class="header-container">
+            <div class="header-left">
+                <h2>Event Manager</h2>
+                <div id="userBalance" class="balance">Balance: $0</div>
+            </div>
+            <button id="logoutBtn">Logout</button>
+        </div>
+
+        <div class="tab-container">
+            <button class="tab-button active" data-tab="events">Events</button>
+            <button class="tab-button" data-tab="messages">Messages</button>
+        </div>
+
+        <!-- Events Tab -->
+        <div id="eventsTab" class="tab-content active">
+            <div class="main-grid">
+                <div>
+                    <h3>Create New Event</h3>
+                    <form id="createEventForm">
+                        <div class="form-group">
+                            <label>Start Time:</label>
+                            <input type="datetime-local" id="eventStart" step="60" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Time:</label>
+                            <input type="datetime-local" id="eventEnd" step="60" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Location:</label>
+                            <input type="text" id="eventLocation" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Cost:</label>
+                            <input type="number" id="eventCost" required>
+                        </div>
+                        <button type="submit">Create Event</button>
+                    </form>
+                </div>
+
+                <div>
+                    <h3>Your Events</h3>
+                    <div id="eventsList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div id="messagesTab" class="tab-content">
+            <div class="messaging-container">
+                <div class="users-list" id="usersList">
+                    <!-- Users will be populated here -->
+                </div>
+                
+                <div class="chat-area">
+                    <div class="event-actions" style="margin-bottom: 10px; padding: 10px; border-bottom: 1px solid #ddd;">
+                        <button id="inviteToEventBtn">Invite to Event</button>
+                    </div>
+                    <div class="messages" id="messagesContainer">
+                        <!-- Messages will be populated here -->
+                    </div>
+                    
+                    <form id="messageForm" class="message-form">
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input" 
+                            placeholder="Type your message..." 
+                            rows="2"
+                            required></textarea>
+                        <button type="submit">Send</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Global state
+        let currentUser = null;
+        let selectedUser = null;
+        let messagePollingInterval = null;
+        
+        // Tab handling
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                button.classList.add('active');
+                document.getElementById(`${button.dataset.tab}Tab`).classList.add('active');
+            });
+        });
+        
+        function formatDatetimeLocal(date) {
+            return date.toISOString().slice(0, 16);
+        }
+
+        async function updateUI() {
+            document.getElementById('authContainer').style.display = currentUser ? 'none' : 'block';
+            document.getElementById('mainContainer').style.display = currentUser ? 'block' : 'none';
+            if (currentUser) {
+                await updateBalance();
+                await fetchUserEvents();
+                await fetchUsers();
+                startMessagePolling();
+            } else {
+                stopMessagePolling();
+            }
+        }
+        
+        async function updateBalance() {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`/users/${currentUser.username}/balance`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('userBalance').textContent = `Balance: $${data.balance}`;
+                }
+            } catch (err) {
+                console.error('Error fetching balance:', err);
+            }
+        }
+        
+        // Authentication handlers
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('loginUsername').value,
+                        password: document.getElementById('loginPassword').value
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    document.getElementById('loginForm').reset();
+                    updateUI();
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Login failed');
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                alert('Login failed');
+            }
+        });
+        
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const formData = {
+                    username: document.getElementById('regUsername').value,
+                    password: document.getElementById('regPassword').value,
+                    name: document.getElementById('regName').value,
+                    total_budget: parseFloat(document.getElementById('regBudget').value)
+                };
+        
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+        
+                const data = await response.json();
+                if (response.ok) {
+                    alert('Registration successful! Please login.');
+                    document.getElementById('registerForm').reset();
+                } else {
+                    alert(`Registration failed: ${data.error}`);
+                }
+            } catch (err) {
+                console.error('Registration error:', err);
+                alert(`Registration failed: ${err.message}`);
+            }
+        });
+        
+        // Event management
+        document.getElementById('createEventForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const startTime = new Date(document.getElementById('eventStart').value).toISOString();
+                const endTime = new Date(document.getElementById('eventEnd').value).toISOString();
+        
+                const response = await fetch('/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser.username,
+                        time_begin: startTime,
+                        time_end: endTime,
+                        location: document.getElementById('eventLocation').value,
+                        cost: parseFloat(document.getElementById('eventCost').value)
+                    })
+                });
+        
+                const data = await response.json();
+                if (response.ok) {
+                    document.getElementById('createEventForm').reset();
+                    fetchUserEvents();
+                    setDefaultDates();
+                    updateBalance();
+                } else {
+                    alert(`Failed to create event: ${data.error || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('Create event error:', err);
+                alert('Failed to create event');
+            }
+        });
+        
+        async function fetchUserEvents() {
+            if (!currentUser) return;
+            try {
+                const response = await fetch(`/users/${currentUser.username}/events`);
+                if (response.ok) {
+                    const events = await response.json();
+                    const eventsList = document.getElementById('eventsList');
+                    eventsList.innerHTML = events.map(event => `
+                        <div class="event-card">
+                            <div><strong>Location:</strong> ${event.location}</div>
+                            <div><strong>Start:</strong> ${new Date(event.time_begin).toLocaleString()}</div>
+                            <div><strong>End:</strong> ${new Date(event.time_end).toLocaleString()}</div>
+                            <div><strong>Cost:</strong> $${event.cost}</div>
+                            ${event.host === currentUser.username ? '<div><strong>(You are hosting)</strong></div>' : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Fetch events error:', err);
+            }
+        }
+        
+        async function fetchUsers() {
+            try {
+                const response = await fetch('/users');
+                if (response.ok) {
+                    const users = await response.json();
+                    const usersList = document.getElementById('usersList');
+                    usersList.innerHTML = users
+                        .filter(user => user.username !== currentUser.username)
+                        .map(user => `
+                            <div class="user-item" data-username="${user.username}">
+                                ${user.name} (${user.username})
+                            </div>
+                        `).join('');
+        
+                    document.querySelectorAll('.user-item').forEach(item => {
+                        item.addEventListener('click', () => selectUser(item.dataset.username));
+                    });
+                }
+            } catch (err) {
+                console.error('Fetch users error:', err);
+            }
+        }
+        
+        function selectUser(username) {
+            selectedUser = username;
+            document.querySelectorAll('.user-item').forEach(item => {
+                item.classList.toggle('active', item.dataset.username === username);
+            });
+            fetchMessages();
+        }
+        
+        function displayMessages(messages) {
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = messages.map(msg => {
+                const isSent = msg.sender === currentUser.username;
+                const time = new Date(msg.datetime).toLocaleString();
+                
+                try {
+                    const contentObj = JSON.parse(msg.contents);
+                    if (contentObj.type === 'event_invitation') {
+                        const event = contentObj.event_details;
+                        return `
+                            <div class="message ${isSent ? 'sent' : 'received'}" style="background-color: #f0f8ff;">
+                                <div class="message-content">
+                                    ${isSent ? 
+                                        `You invited ${msg.reciever} to your event at ${event.location}` :
+                                        `${msg.sender} invited you to their event at ${event.location}!
+                                         ${event.host === msg.sender ? ' (They are hosting)' : ` (Hosted by ${event.host})`}`
+                                    }
+                                    ${!isSent ? `
+                                        <div style="margin-top: 10px;">
+                                            <button onclick="joinEvent(${contentObj.event_id}, '${msg.sender}')" class="join-button">
+                                                Join Event
+                                            </button>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                <div class="message-time">${time}</div>
+                            </div>
+                        `;
+                    } else if (contentObj.type === 'invitation_response') {
+                        return `
+                            <div class="message ${isSent ? 'sent' : 'received'}" style="background-color: #f0f8ff;">
+                                <div class="message-content">
+                                    ${isSent ? 
+                                        `You joined the event!` :
+                                        `${msg.sender} joined your event!`
+                                    }
+                                </div>
+                                <div class="message-time">${time}</div>
+                            </div>
+                        `;
+                    }
+                } catch (e) {
+                    return `
+                        <div class="message ${isSent ? 'sent' : 'received'}">
+                            <div class="message-content">${msg.contents}</div>
+                            <div class="message-time">${time}</div>
+                        </div>
+                    `;
+                }
+            }).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Event invitation and joining
+        document.getElementById('inviteToEventBtn').addEventListener('click', async () => {
+            if (!selectedUser) {
+                alert('Please select a user first');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/users/${currentUser.username}/events`);
+                if (response.ok) {
+                    const events = await response.json();
+                    if (events.length === 0) {
+                        alert('You have no events to invite to');
+                        return;
+                    }
+                    const event = await showEventSelectionDialog(events);
+                    if (!event) return;
+                    
+                    const inviteResponse = await fetch('/events/invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            event_id: event.event_id,
+                            sender: currentUser.username,
+                            recipient: selectedUser
+                        })
+                    });
+                    
+                    if (inviteResponse.ok) {
+                        alert('Invitation sent successfully');
+                        await fetchMessages();
+                    } else {
+                        const error = await inviteResponse.json();
+                        alert(error.error || 'Failed to send invitation');
+                    }
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Failed to send invitation');
+            }
+        });
+        
+        function showEventSelectionDialog(events) {
+            return new Promise((resolve) => {
+                const dialogBackdrop = document.createElement('div');
+                dialogBackdrop.className = 'dialog-backdrop';
+                
+                const dialog = document.createElement('div');
+                dialog.className = 'dialog-content';
+                
+                dialog.innerHTML = `
+                    <h3>Select Event to Invite To</h3>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        ${events.map(event => `
+                            <div class="event-item" style="padding: 10px; border: 1px solid #ddd; margin-bottom: 10px; border-radius: 4px;">
+                                <div><strong>Location:</strong> ${event.location}</div>
+                                <div><strong>Start:</strong> ${new Date(event.time_begin).toLocaleString()}</div>
+                                <div><strong>End:</strong> ${new Date(event.time_end).toLocaleString()}</div>
+                                <div><strong>Cost:</strong> $${event.cost} ${event.host === currentUser.username ? '(You are hosting)' : ''}</div>
+                                <button onclick="selectEvent(${event.event_id})" style="margin-top: 10px;">Select</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="closeEventDialog()" style="margin-top: 10px;">Cancel</button>
+                `;
+                
+                dialogBackdrop.appendChild(dialog);
+                document.body.appendChild(dialogBackdrop);
+                
+                window.selectEvent = (eventId) => {
+                    const event = events.find(e => e.event_id === eventId);
+                    document.body.removeChild(dialogBackdrop);
+                    resolve(event);
+                };
+                
+                window.closeEventDialog = () => {
+                    document.body.removeChild(dialogBackdrop);
+                    resolve(null);
+                };
+            });
+        }
+        
+        async function joinEvent(eventId, inviter) {
+            try {
+                const response = await fetch(`/events/${eventId}/join`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser.username,
+                        inviter: inviter
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Successfully joined the event!');
+                    await Promise.all([
+                        fetchMessages(),
+                        fetchUserEvents(),
+                        updateBalance()
+                    ]);
+                } else {
+                    const error = await response.json();
+                    alert(error.error || 'Failed to join event');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Failed to join event');
+            }
+        }
+        
+        // Message sending and polling
+        document.getElementById('messageForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!selectedUser) {
+                alert('Please select a user to message');
+                return;
+            }
+        
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            try {
+                const response = await fetch('/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sender: currentUser.username,
+                        reciever: selectedUser,
+                        contents: message
+                    })
+                });
+        
+                if (response.ok) {
+                    messageInput.value = '';
+                    await fetchMessages();
+                } else {
+                    const error = await response.json();
+                    alert('Failed to send message: ' + error.error);
+                }
+            } catch (err) {
+                console.error('Send message error:', err);
+                alert('Failed to send message');
+            }
+        });
+        
+        async function fetchMessages() {
+            if (!selectedUser) return;
+            
+            try {
+                const response = await fetch(`/messages/${currentUser.username}/${selectedUser}`);
+                if (response.ok) {
+                    const messages = await response.json();
+                    displayMessages(messages);
+                }
+            } catch (err) {
+                console.error('Fetch messages error:', err);
+            }
+        }
+        
+        function startMessagePolling() {
+            stopMessagePolling();
+            messagePollingInterval = setInterval(fetchMessages, 1000);
+        }
+        
+        function stopMessagePolling() {
+            if (messagePollingInterval) {
+                clearInterval(messagePollingInterval);
+                messagePollingInterval = null;
+            }
+        }
+        
+        // Date handling
+        function setDefaultDates() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            now.setMinutes(0);
+            now.setSeconds(0);
+            tomorrow.setMinutes(0);
+            tomorrow.setSeconds(0);
+            
+            document.getElementById('eventStart').value = formatDatetimeLocal(now);
+            document.getElementById('eventEnd').value = formatDatetimeLocal(tomorrow);
+        }
+        
+        // Logout handling
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            currentUser = null;
+            selectedUser = null;
+            updateUI();
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            setDefaultDates();
+            
+            document.getElementById('eventEnd').addEventListener('change', function() {
+                const startTime = new Date(document.getElementById('eventStart').value);
+                const endTime = new Date(this.value);
+                
+                if (endTime <= startTime) {
+            alert('End time must be after start time');
+            this.value = document.getElementById('eventStart').value;
+        }
+    });
+    
+    document.getElementById('eventStart').addEventListener('change', function() {
+        const startTime = new Date(this.value);
+        const endTime = new Date(document.getElementById('eventEnd').value);
+        
+        if (endTime <= startTime) {
+            const newEndTime = new Date(startTime);
+            newEndTime.setHours(startTime.getHours() + 1);
+            document.getElementById('eventEnd').value = formatDatetimeLocal(newEndTime);
+        }
+    });
+});
+
+document.getElementById('messageInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault(); // Prevent the default behavior
+        const messageInput = this;
+        const message = messageInput.value.trim();
+        
+        if (!message) return;
+        
+        if (!selectedUser) {
+            alert('Please select a user to message');
+            return;
+        }
+        
+        fetch('/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: currentUser.username,
+                reciever: selectedUser,
+                contents: message
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                messageInput.value = '';
+                return fetchMessages();
+            } else {
+                return response.json().then(error => {
+                    throw new Error(error.error || 'Failed to send message');
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Send message error:', err);
+            alert(err.message);
+        });
+    }
+});
+
+document.getElementById('messageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!selectedUser) {
+        alert('Please select a user to message');
+        return;
+    }
+
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    if (!message) return;
+    
+    try {
+        const response = await fetch('/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sender: currentUser.username,
+                reciever: selectedUser,
+                contents: message
+            })
+        });
+
+        if (response.ok) {
+            messageInput.value = '';
+            await fetchMessages();
+        } else {
+            const error = await response.json();
+            alert('Failed to send message: ' + error.error);
+        }
+    } catch (err) {
+        console.error('Send message error:', err);
+        alert('Failed to send message');
+    }
+});
+
+updateUI();
+</script>
+</html>

@@ -1,4 +1,4 @@
-// src/Navbar.jsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import './Navbar.css'; 
@@ -33,6 +33,7 @@ function Navbar() {
   </div>
 </nav>
   ); 
+
 }
 
 export default Navbar;

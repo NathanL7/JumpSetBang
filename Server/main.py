@@ -9,6 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS 
 import logging
+import json
 logging.basicConfig(level=logging.DEBUG)
 
 def get_db():
@@ -16,9 +17,20 @@ def get_db():
     conn.row_factory = sqlite3.Row  # Enables column access by name
     return conn
 
+# conn = get_db()
+# cursor = conn.cursor()
+# cursor.execute('DROP TABLE IF EXISTS users')
+# cursor.execute('DROP TABLE IF EXISTS events')
+# cursor.execute('DROP TABLE IF EXISTS participants')
+# cursor.execute('DROP TABLE IF EXISTS messages')
+# conn.commit()
+# conn.close()
+
 def init_database():
     conn = get_db()
     cursor = conn.cursor()
+
+    # cursor.execute('DROP TABLE IF EXISTS messages')
     
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS users(
@@ -28,11 +40,14 @@ def init_database():
                 total_budget REAL NOT NULL)''')
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS events(
-                event_id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host TEXT NOT NULL,
                 time_begin DATETIME NOT NULL,
                 time_end DATETIME NOT NULL,
                 location TEXT NOT NULL,
-                cost REAL NOT NULL)''')
+                cost REAL NOT NULL,
+                FOREIGN KEY (host) REFERENCES users(username) 
+                )''')                                                   # only the the host pays for an event
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS participants(
                 event_id INTEGER NOT NULL,
@@ -49,7 +64,6 @@ def init_database():
                 datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sender) REFERENCES users(username),
                 FOREIGN KEY (reciever) REFERENCES users(username))''')
-
     conn.commit()
     conn.close()
     
@@ -63,7 +77,17 @@ def after_request(response):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('integrated.html')
+
+# These are deprecated
+
+# @app.route('/messages')
+# def messages_page():
+#     return render_template('messages.html')
+
+# @app.route('/integrated')
+# def integrated():
+#     return render_template('integrated.html')
 
 # Create event
 @app.route("/events", methods=["POST"])
@@ -73,11 +97,18 @@ def create_event():
     cursor = conn.cursor()
     
     try:
-        # Insert event
+        # Check host's budget first
+        cursor.execute("SELECT balance FROM (SELECT total_budget - COALESCE(SUM(cost), 0) as balance FROM users LEFT JOIN events ON users.username = events.host WHERE users.username = ? GROUP BY users.username)", (data['username'],))
+        balance = cursor.fetchone()
+        
+        # if not balance or balance['balance'] < data['cost']:
+            # return jsonify({"error": "Insufficient budget to host event"}), 400
+
+        # Insert event with host
         cursor.execute('''
-            INSERT INTO events (time_begin, time_end, location, cost)
-            VALUES (?, ?, ?, ?)
-        ''', (data['time_begin'], data['time_end'], data['location'], data['cost']))
+            INSERT INTO events (host, time_begin, time_end, location, cost)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (data['username'], data['time_begin'], data['time_end'], data['location'], data['cost']))
         
         event_id = cursor.lastrowid
         
@@ -91,39 +122,6 @@ def create_event():
         return jsonify({"message": "Event created", "event_id": event_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-    finally:
-        conn.close()
-
-# Join event
-@app.route("/events/<int:event_id>/join", methods=["POST"])
-def join_event(event_id):
-    data = request.get_json()
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        # Check if event exists
-        cursor.execute("SELECT cost FROM events WHERE event_id = ?", (event_id,))
-        event = cursor.fetchone()
-        if not event:
-            return jsonify({"error": "Event not found"}), 404
-            
-        # Check user's budget
-        cursor.execute("SELECT total_budget FROM users WHERE username = ?", (data['username'],))
-        user = cursor.fetchone()
-        if not user or user['total_budget'] < event['cost']:
-            return jsonify({"error": "Insufficient budget"}), 400
-            
-        # Add participant
-        cursor.execute('''
-            INSERT INTO participants (event_id, username)
-            VALUES (?, ?)
-        ''', (event_id, data['username']))
-        
-        conn.commit()
-        return jsonify({"message": "Joined event successfully"}), 200
-    except sqlite3.IntegrityError:
-        return jsonify({"error": "Already joined this event"}), 400
     finally:
         conn.close()
 
@@ -230,21 +228,34 @@ def login():
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/messages', methods=['POST']) # sends a message
+@app.route('/users', methods=['GET'])
+def get_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, name FROM users')
+    users = [dict(row) for row in cursor.fetchall()]
+    return jsonify(users)
+
+@app.route('/messages', methods=['POST'])
 def send_message():
     data = request.get_json()
     conn = get_db()
     cursor = conn.cursor()
 
     try:
+        # Make sure all required fields are present
+        if not all(k in data for k in ['sender', 'reciever', 'contents']):
+            return jsonify({"error": "Missing required fields"}), 400
+
         cursor.execute('''
-            INSERT INTO messages(sender, reciever, contents)
+            INSERT INTO messages (sender, reciever, contents)
             VALUES (?, ?, ?)
         ''', (data['sender'], data['reciever'], data['contents']))
 
         conn.commit()
-        return jsonify({"message": "Message sent"}), 201
+        return jsonify({"message": "Message sent successfully"}), 201
     except Exception as e:
+        print(f"Error sending message: {str(e)}")  # Add debug logging
         return jsonify({"error": str(e)}), 400
     finally:
         conn.close()
@@ -258,7 +269,7 @@ def get_messages(username):
         SELECT *
         FROM messages
         WHERE reciever = ?
-        SORT BY datetime DESC
+        ORDER BY datetime ASC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
@@ -273,7 +284,7 @@ def get_sent_messages(username):
         SELECT *
         FROM messages
         WHERE sender = ?
-        SORT BY datetime DESC
+        ORDER BY datetime ASC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
@@ -288,12 +299,120 @@ def get_messages_between(sender, reciever):
     cursor.execute('''
         SELECT *
         FROM messages
-        WHERE sender = ? AND reciever = ?
-        SORT BY datetime DESC
-    ''', (sender, reciever))
+        WHERE (sender = ? AND reciever = ?)
+        OR (sender = ? AND reciever = ?)
+        ORDER BY datetime ASC
+    ''', (sender, reciever, reciever, sender))
 
     messages = [dict(row) for row in cursor.fetchall()]
     return jsonify(messages)
+
+# Add to your existing Flask routes:
+
+@app.route('/events/invite', methods=['POST'])
+def invite_to_event():
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Verify event exists and sender is a participant
+        cursor.execute('''
+            SELECT e.* FROM events e
+            JOIN participants p ON e.event_id = p.event_id
+            WHERE e.event_id = ? AND p.username = ?
+        ''', (data['event_id'], data['sender']))
+        
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"error": "Event not found or you're not a participant"}), 404
+
+        # Create invitation message with event details
+        message_content = {
+            "type": "event_invitation",
+            "event_id": data['event_id'],
+            "event_details": dict(event)
+        }
+        
+        cursor.execute('''
+            INSERT INTO messages (sender, reciever, contents)
+            VALUES (?, ?, ?)
+        ''', (data['sender'], data['recipient'], json.dumps(message_content)))
+        
+        conn.commit()
+        return jsonify({"message": "Invitation sent"}), 201
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        conn.close()
+
+@app.route('/events/<int:event_id>/join', methods=['POST'])
+def join_event(event_id):
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if event exists
+        cursor.execute("SELECT cost FROM events WHERE event_id = ?", (event_id,))
+        event = cursor.fetchone()
+        if not event:
+            return jsonify({"error": "Event not found"}), 404
+            
+        cursor.execute('''
+            INSERT INTO participants (event_id, username)
+            VALUES (?, ?)
+        ''', (event_id, data['username']))
+        
+        if 'inviter' in data:
+            response_content = {
+                "type": "invitation_response",
+                "event_id": event_id,
+                "status": "accepted"
+            }
+            cursor.execute('''
+                INSERT INTO messages (sender, reciever, contents)
+                VALUES (?, ?, ?)
+            ''', (data['username'], data['inviter'], json.dumps(response_content)))
+        
+        conn.commit()
+        return jsonify({"message": "Joined event successfully"}), 200
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Already joined this event"}), 400
+    finally:
+        conn.close()
+
+# get balance (budget - total cost of events user hosts) for a user
+# Modify/add this route in your Flask server
+@app.route('/users/<username>/balance', methods=['GET'])
+def get_balance(username):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Get total budget and sum of hosted event costs
+        cursor.execute('''
+            SELECT 
+                users.total_budget,
+                COALESCE(SUM(events.cost), 0) as hosted_events_cost
+            FROM users
+            LEFT JOIN events ON users.username = events.host
+            WHERE users.username = ?
+            GROUP BY users.username
+        ''', (username,))
+        
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({"error": "User not found"}), 404
+        
+        balance = result['total_budget'] - result['hosted_events_cost']
+        return jsonify({"balance": balance})
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     conn = get_db()
