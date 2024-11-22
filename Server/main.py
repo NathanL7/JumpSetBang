@@ -6,6 +6,7 @@
 
 import sqlite3
 from flask import Flask, request, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 
 def get_db():
     conn = sqlite3.connect('database.db')
@@ -178,7 +179,7 @@ def registerUser():
                 name,
                 total_budget) 
                 VALUES (?,?,?,?)
-        ''', (username, password, name, total_budget))
+        ''', (username, generate_password_hash(password), name, total_budget))
     
         conn.commit()
     except sqlite3.IntegrityError:
@@ -188,6 +189,17 @@ def registerUser():
 
     return jsonify({"message": "User registered successfully"}), 201
     
+@app.route('/login', method=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password are required'}), 400
+
+    conn = get_db()
+    validate = conn.execute('''SELECT * FROM users WHERE username = ''')
 if __name__ == "__main__":
     conn = get_db()
     cursor = conn.cursor()
