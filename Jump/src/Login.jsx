@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from './authContext';
 import { useNavigate } from 'react-router-dom';
+import "./Login.css"
 
 const Login = () => {
   const [isRegistering, setIsRegistering] = useState(false); // Toggle between Login and Register

@@ -1,0 +1,43 @@
+.message-container {
+    padding: 20px;
+    font-family: Arial, sans-serif;
+  }
+  
+  h2 {
+    color: #333;
+  }
+  
+  .message-list {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .message-item {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  .message-item h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #444;
+  }
+  
+  .message-item p {
+    margin: 10px 0 5px;
+    font-size: 16px;
+  }
+  
+  .message-date {
+    font-size: 14px;
+    color: #888;
+  }
+  
+  .error-message {
+    color: red;
+    font-weight: bold;
+  }
+  

@@ -5,6 +5,7 @@ import EventCalendar from './EventCalendar';
 import Landing from './Landing';
 import Social from './Social';
 import Login from './Login';
+import Message from './Message';
 import { AuthProvider } from './authContext';
 
 function App() {
@@ -17,7 +18,8 @@ function App() {
           <Route path="/calendar" element={<EventCalendar />} />
           <Route path="/social" element={<Social />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/home" element={<Landing />} /> {/* Added /home route */}
+          <Route path="/home" element={<Landing />} />
+          <Route path="/message" element={<Message />} />
         </Routes>
       </Router>
     </AuthProvider>
