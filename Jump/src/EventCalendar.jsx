@@ -17,9 +17,7 @@ function EventCalendar() {
     start: null,
     end: null,
     location: '',
-    cost: '',
-    startTime: '',
-    endTime: ''
+    cost: ''
   });
 
   const handleSelectSlot = ({ start, end }) => {
@@ -28,9 +26,7 @@ function EventCalendar() {
       start,
       end,
       location: '',
-      cost: '',
-      startTime: moment(start).format('HH:mm'),
-      endTime: moment(end).format('HH:mm')
+      cost: ''
     });
     setShowForm(true);
   };
@@ -52,41 +48,16 @@ function EventCalendar() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Combine date and time for start
-    const startDateTime = moment(newEvent.start)
-      .hour(parseInt(newEvent.startTime.split(':')[0]))
-      .minute(parseInt(newEvent.startTime.split(':')[1]))
-      .toDate();
-
-    // Combine date and time for end
-    const endDateTime = moment(newEvent.end)
-      .hour(parseInt(newEvent.endTime.split(':')[0]))
-      .minute(parseInt(newEvent.endTime.split(':')[1]))
-      .toDate();
-
-    const eventToAdd = {
-      title: newEvent.title,
-      start: startDateTime,
-      end: endDateTime,
-      location: newEvent.location,
-      cost: newEvent.cost
-    };
-
-    setEvents(prev => [...prev, eventToAdd]);
+    setEvents(prev => [...prev, newEvent]);
     setShowForm(false);
     setNewEvent({
       title: '',
       start: null,
       end: null,
       location: '',
-      cost: '',
-      startTime: '',
-      endTime: ''
+      cost: ''
     });
   };
-
-  
 
   return (
     <div style={{ padding: '20px' }}>
@@ -110,8 +81,7 @@ function EventCalendar() {
           backgroundColor: 'white',
           padding: '20px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-          borderRadius: '8px',
-          zIndex: 1000
+          borderRadius: '8px'
         }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input
@@ -121,34 +91,7 @@ function EventCalendar() {
               value={newEvent.title}
               onChange={handleInputChange}
               required
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
             />
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <div style={{ flex: 1 }}>
-                <label>Start Time:</label>
-                <input
-                  type="time"
-                  name="startTime"
-                  value={newEvent.startTime}
-                  onChange={handleInputChange}
-                  required
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label>End Time:</label>
-                <input
-                  type="time"
-                  name="endTime"
-                  value={newEvent.endTime}
-                  onChange={handleInputChange}
-                  required
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
-                />
-              </div>
-            </div>
-
             <input
               type="text"
               name="location"
@@ -156,9 +99,7 @@ function EventCalendar() {
               value={newEvent.location}
               onChange={handleInputChange}
               required
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
             />
-            
             <input
               type="number"
               name="cost"
@@ -166,34 +107,12 @@ function EventCalendar() {
               value={newEvent.cost}
               onChange={handleInputChange}
               required
-              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ddd' }}
             />
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
-              <button 
-                type="button" 
-                onClick={() => setShowForm(false)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: '1px solid #ddd',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setShowForm(false)}>
                 Cancel
               </button>
-              <button 
-                type="submit"
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  backgroundColor: '#007bff',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
+              <button type="submit">
                 Add Event
               </button>
             </div>

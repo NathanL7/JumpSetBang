@@ -1,0 +1,25 @@
+.cal-container {
+    top: 40px;
+    left: 150px;
+    width: 80%; /* Adjust width if needed */
+    min-height: auto; /* Remove unnecessary height */
+    position: relative;
+    margin: 0 auto; /* Centers the container horizontally */
+    display: inline-block; /* Shrinks the container to fit its content */
+    padding: 10px; /* Small padding to keep the border slightly away */
+    border: 2px solid transparent; /* Base border */
+    border-radius: 12px; /* Rounded corners */
+    transition: all 0.3s ease-in-out; /* Smooth hover effects */
+    overflow: hidden; /* Ensures the content doesn't spill out */
+  }
+  
+  .cal-container:hover {
+    border-color: #f6d365; /* Highlight the border */
+    box-shadow: 0 0 15px #fda085, 0 0 30px #f6d365; /* Glowing effect */
+    transform: scale(1.02); /* Slight zoom effect */
+  }
+  
+  .cal-container .rbc-calendar {
+    margin: 0; /* Removes any margin inside the calendar */
+    padding: 0; /* Removes unnecessary padding */
+  }
