@@ -1,4 +1,4 @@
 # JumpSetBang
 hackathon winners
 
-^_!
+^=!
