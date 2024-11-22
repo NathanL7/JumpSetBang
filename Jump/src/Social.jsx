@@ -1,4 +1,3 @@
-// src/Social.jsx
 import React from 'react';
 
 function Social() {
