@@ -1,0 +1,83 @@
+.auth-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f6d365, #fda085);
+    padding: 20px;
+    
+}
+  
+h2 {
+    font-family: 'Arial', sans-serif;
+    font-size: 6rem;
+    color: #333;
+    margin-bottom: 20px;
+    text-align: center;
+}
+  
+.form-group {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 15px;
+    position: relative;
+}
+  
+label {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    font-size: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+  
+input:focus {
+    border-color: #fda085;
+    box-shadow: 0 0 8px rgba(253, 160, 133, 0.5);
+    outline: none;
+}
+  
+button {
+    width: 100%;
+    max-width: 400px;
+    padding: 10px;
+    font-size: 1.1rem;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+}
+  
+button.btn-success {
+    background-color: #fda085;
+    color: white;
+}
+  
+button.btn-success:hover {
+    background-color: #f6d365;
+}
+  
+button.btn-secondary {
+    background-color: #333;
+    color: white;
+}
+  
+button.btn-secondary:hover {
+    background-color: #555;
+}
+  
+.text-danger {
+    color: red;
+}
+  
+.text-success {
+    color: green;
+}

@@ -29,10 +29,10 @@ const Login = () => {
         throw new Error(errorText || 'Login failed. Please check your credentials.');
       }
 
-      const employee = await response.json();
-      console.log('Successful Login! Welcome ' + employee.name);
+      const user = await response.json();
+      console.log('Successful Login! Welcome ' + user.name);
 
-      login(employee);
+      login(user);
       navigate('/home');
     } catch (err) {
       setError(err.message || 'An unexpected error occurred.');
