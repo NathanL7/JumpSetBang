@@ -15,9 +15,6 @@ function Navbar() {
           <li>
             <Link to="/calendar">Event Calendar</Link>
           </li>
-          <li>
-            <Link to="/social">Social Page</Link>
-          </li>
         </ul>
       </div>
     </nav>
