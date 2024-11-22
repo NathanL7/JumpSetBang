@@ -43,9 +43,11 @@ def init_database():
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS messages(
                 message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL,
-                message TEXT NOT NULL,
-                FOREIGN KEY (username) REFERENCES users(username))''')
+                sender TEXT NOT NULL,
+                reciever TEXT NOT NULL,
+                contents TEXT NOT NULL,
+                FOREIGN KEY (sender) REFERENCES users(username))
+                FOREIGN KEY (reciever) REFERENCES users(username)''')
 
     conn.commit()
     conn.close()
@@ -227,8 +229,54 @@ def login():
 
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
-        
-        
+
+@app.route('/messages', methods=['POST'])
+def send_message():
+    data = request.get_json()
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('''
+            INSERT INTO messages(sender, reciever, contents)
+            VALUES (?, ?, ?)
+        ''', (data['sender'], data['reciever'], data['contents']))
+
+        conn.commit()
+        return jsonify({"message": "Message sent"}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+    finally:
+        conn.close()
+
+@app.route('/messages/recieved/<username>', methods=['GET']) # gets messages a user has recieved
+def get_messages(username):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT *
+        FROM messages
+        WHERE reciever = ?
+    ''', (username,))
+
+    messages = [dict(row) for row in cursor.fetchall()]
+    return jsonify(messages)
+
+@app.route('/messages/sent/<username>', methods=['GET']) # gets messages a user has sent
+def get_sent_messages(username):
+    conn = get_db()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT *
+        FROM messages
+        WHERE sender = ?
+    ''', (username,))
+
+    messages = [dict(row) for row in cursor.fetchall()]
+    return jsonify(messages)
+
 if __name__ == "__main__":
     conn = get_db()
     cursor = conn.cursor()
@@ -246,4 +294,4 @@ if __name__ == "__main__":
     conn.close()
     
     app.run(debug=True) # run and wait for requests 
-    #flask --app .\Server\main.py run --port=5050
+    #flask --app .\Server\main.py run
