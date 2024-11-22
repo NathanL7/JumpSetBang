@@ -18,6 +18,11 @@ function Navbar() {
           <li>
             <Link to="/social">Social Page</Link>
           </li>
+          <li>
+            <Link to="/login" className="navbar-login-button">
+              Login
+            </Link>
+          </li>
         </ul>
       </div>
     </nav>
