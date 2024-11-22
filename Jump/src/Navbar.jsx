@@ -1,13 +1,13 @@
 // src/Navbar.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
-import './App.css'; // Or use a dedicated Navbar.css if needed
+import './Navbar.css'; 
 
 function Navbar() {
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <h1 className="navbar-logo">MyApp</h1>
+        <h1 className="navbar-logo">YourDailyTracker</h1>
         <ul className="navbar-links">
           <li>
             <Link to="/">Home</Link>
