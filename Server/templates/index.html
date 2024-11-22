@@ -24,12 +24,25 @@
         label {
             display: block;
             margin-bottom: 5px;
+            font-weight: bold;
         }
         input {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
             box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        input[type="datetime-local"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+        }
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            padding: 4px;
         }
         button {
             padding: 10px 15px;
@@ -47,6 +60,7 @@
             padding: 10px;
             margin-bottom: 10px;
             border-radius: 4px;
+            background-color: #f8f9fa;
         }
     </style>
 </head>
@@ -96,11 +110,11 @@
         <form id="createEventForm">
             <div class="form-group">
                 <label>Start Time:</label>
-                <input type="datetime-local" id="eventStart" required>
+                <input type="datetime-local" id="eventStart" step="60" required>
             </div>
             <div class="form-group">
                 <label>End Time:</label>
-                <input type="datetime-local" id="eventEnd" required>
+                <input type="datetime-local" id="eventEnd" step="60" required>
             </div>
             <div class="form-group">
                 <label>Location:</label>
@@ -119,6 +133,11 @@
 
     <script>
         let currentUser = null;
+
+        // Format datetime for inputs
+        function formatDatetimeLocal(date) {
+            return date.toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:mm
+        }
 
         // Show/hide containers based on auth state
         function updateUI() {
@@ -148,7 +167,8 @@
                     currentUser = data;
                     updateUI();
                 } else {
-                    alert('Login failed');
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Login failed');
                 }
             } catch (err) {
                 console.error('Login error:', err);
@@ -156,7 +176,6 @@
             }
         });
 
-        // Register Form Handler
         // Register Form Handler
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -168,7 +187,7 @@
                     total_budget: parseFloat(document.getElementById('regBudget').value)
                 };
 
-                console.log('Sending registration data:', formData); // Debug log
+                console.log('Sending registration data:', formData);
 
                 const response = await fetch('/register', {
                     method: 'POST',
@@ -184,7 +203,7 @@
                     alert('Registration successful! Please login.');
                     document.getElementById('registerForm').reset();
                 } else {
-                    alert(`Registration failed: ${data.error}\n${data.details || ''}`);
+                    alert(`Registration failed: ${data.error}`);
                 }
             } catch (err) {
                 console.error('Registration error:', err);
@@ -196,6 +215,9 @@
         document.getElementById('createEventForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             try {
+                const startTime = new Date(document.getElementById('eventStart').value).toISOString();
+                const endTime = new Date(document.getElementById('eventEnd').value).toISOString();
+
                 const response = await fetch('/events', {
                     method: 'POST',
                     headers: {
@@ -203,17 +225,21 @@
                     },
                     body: JSON.stringify({
                         username: currentUser.username,
-                        time_begin: document.getElementById('eventStart').value,
-                        time_end: document.getElementById('eventEnd').value,
+                        time_begin: startTime,
+                        time_end: endTime,
                         location: document.getElementById('eventLocation').value,
                         cost: parseFloat(document.getElementById('eventCost').value)
                     })
                 });
+
+                const data = await response.json();
                 if (response.ok) {
                     document.getElementById('createEventForm').reset();
                     fetchUserEvents();
+                    // Reset default dates after form reset
+                    setDefaultDates();
                 } else {
-                    alert('Failed to create event');
+                    alert(`Failed to create event: ${data.error || 'Unknown error'}`);
                 }
             } catch (err) {
                 console.error('Create event error:', err);
@@ -228,24 +254,71 @@
                 if (response.ok) {
                     const events = await response.json();
                     const eventsList = document.getElementById('eventsList');
-                    eventsList.innerHTML = events.map(event => `
-                        <div class="event-card">
-                            <div><strong>Location:</strong> ${event.location}</div>
-                            <div><strong>Start:</strong> ${new Date(event.time_begin).toLocaleString()}</div>
-                            <div><strong>End:</strong> ${new Date(event.time_end).toLocaleString()}</div>
-                            <div><strong>Cost:</strong> $${event.cost}</div>
-                        </div>
-                    `).join('');
+                    eventsList.innerHTML = events.map(event => {
+                        const startTime = new Date(event.time_begin);
+                        const endTime = new Date(event.time_end);
+                        return `
+                            <div class="event-card">
+                                <div><strong>Location:</strong> ${event.location}</div>
+                                <div><strong>Start:</strong> ${startTime.toLocaleString()}</div>
+                                <div><strong>End:</strong> ${endTime.toLocaleString()}</div>
+                                <div><strong>Cost:</strong> $${event.cost}</div>
+                            </div>
+                        `;
+                    }).join('');
                 }
             } catch (err) {
                 console.error('Fetch events error:', err);
             }
         }
 
+        // Set default dates for the event form
+        function setDefaultDates() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            // Round to nearest hour
+            now.setMinutes(0);
+            now.setSeconds(0);
+            tomorrow.setMinutes(0);
+            tomorrow.setSeconds(0);
+            
+            document.getElementById('eventStart').value = formatDatetimeLocal(now);
+            document.getElementById('eventEnd').value = formatDatetimeLocal(tomorrow);
+        }
+
         // Logout Handler
         document.getElementById('logoutBtn').addEventListener('click', () => {
             currentUser = null;
             updateUI();
+        });
+
+        // Initialize date/time validation and defaults
+        document.addEventListener('DOMContentLoaded', () => {
+            setDefaultDates();
+            
+            // Add validation for end time
+            document.getElementById('eventEnd').addEventListener('change', function() {
+                const startTime = new Date(document.getElementById('eventStart').value);
+                const endTime = new Date(this.value);
+                
+                if (endTime <= startTime) {
+                    alert('End time must be after start time');
+                    this.value = document.getElementById('eventStart').value;
+                }
+            });
+            
+            document.getElementById('eventStart').addEventListener('change', function() {
+                const startTime = new Date(this.value);
+                const endTime = new Date(document.getElementById('eventEnd').value);
+                
+                if (endTime <= startTime) {
+                    const newEndTime = new Date(startTime);
+                    newEndTime.setHours(startTime.getHours() + 1);
+                    document.getElementById('eventEnd').value = formatDatetimeLocal(newEndTime);
+                }
+            });
         });
 
         // Initial UI update

@@ -43,7 +43,6 @@ def init_database():
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS messages(
                 message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                event_id INTEGER NOT NULL,
                 username TEXT NOT NULL,
                 message TEXT NOT NULL,
                 FOREIGN KEY (username) REFERENCES users(username))''')
