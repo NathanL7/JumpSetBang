@@ -16,9 +16,20 @@ def get_db():
     conn.row_factory = sqlite3.Row  # Enables column access by name
     return conn
 
+conn = get_db()
+cursor = conn.cursor()
+cursor.execute('DROP TABLE IF EXISTS users')
+cursor.execute('DROP TABLE IF EXISTS events')
+cursor.execute('DROP TABLE IF EXISTS participants')
+cursor.execute('DROP TABLE IF EXISTS messages')
+conn.commit()
+conn.close()
+
 def init_database():
     conn = get_db()
     cursor = conn.cursor()
+
+    # cursor.execute('DROP TABLE IF EXISTS messages')
     
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS users(
@@ -40,16 +51,18 @@ def init_database():
                 PRIMARY KEY(event_id, username),
                 FOREIGN KEY (event_id) REFERENCES events(event_id),
                 FOREIGN KEY (username) REFERENCES users (username))''')
-    cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS messages(
-                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                sender TEXT NOT NULL,
-                reciever TEXT NOT NULL,
-                contents TEXT NOT NULL,
-                datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (sender) REFERENCES users(username),
-                FOREIGN KEY (reciever) REFERENCES users(username))''')
-
+    # Recreate messages table
+    cursor.execute('''
+        CREATE TABLE messages(
+            message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT NOT NULL,
+            reciever TEXT NOT NULL,
+            contents TEXT NOT NULL,
+            datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sender) REFERENCES users(username),
+            FOREIGN KEY (reciever) REFERENCES users(username)
+        )
+    ''')
     conn.commit()
     conn.close()
     
@@ -64,6 +77,10 @@ def after_request(response):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/messages')
+def messages_page():
+    return render_template('messages.html')
 
 # Create event
 @app.route("/events", methods=["POST"])
@@ -230,21 +247,34 @@ def login():
     else:
         return jsonify({'error': 'Invalid username or password'}), 401
 
-@app.route('/messages', methods=['POST']) # sends a message
+@app.route('/users', methods=['GET'])
+def get_users():
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, name FROM users')
+    users = [dict(row) for row in cursor.fetchall()]
+    return jsonify(users)
+
+@app.route('/messages', methods=['POST'])
 def send_message():
     data = request.get_json()
     conn = get_db()
     cursor = conn.cursor()
 
     try:
+        # Make sure all required fields are present
+        if not all(k in data for k in ['sender', 'reciever', 'contents']):
+            return jsonify({"error": "Missing required fields"}), 400
+
         cursor.execute('''
-            INSERT INTO messages(sender, reciever, contents)
+            INSERT INTO messages (sender, reciever, contents)
             VALUES (?, ?, ?)
         ''', (data['sender'], data['reciever'], data['contents']))
 
         conn.commit()
-        return jsonify({"message": "Message sent"}), 201
+        return jsonify({"message": "Message sent successfully"}), 201
     except Exception as e:
+        print(f"Error sending message: {str(e)}")  # Add debug logging
         return jsonify({"error": str(e)}), 400
     finally:
         conn.close()
@@ -258,7 +288,7 @@ def get_messages(username):
         SELECT *
         FROM messages
         WHERE reciever = ?
-        SORT BY datetime DESC
+        ORDER BY datetime ASC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
@@ -273,7 +303,7 @@ def get_sent_messages(username):
         SELECT *
         FROM messages
         WHERE sender = ?
-        SORT BY datetime DESC
+        ORDER BY datetime ASC
     ''', (username,))
 
     messages = [dict(row) for row in cursor.fetchall()]
@@ -288,9 +318,10 @@ def get_messages_between(sender, reciever):
     cursor.execute('''
         SELECT *
         FROM messages
-        WHERE sender = ? AND reciever = ?
-        SORT BY datetime DESC
-    ''', (sender, reciever))
+        WHERE (sender = ? AND reciever = ?)
+        OR (sender = ? AND reciever = ?)
+        ORDER BY datetime ASC
+    ''', (sender, reciever, reciever, sender))
 
     messages = [dict(row) for row in cursor.fetchall()]
     return jsonify(messages)
